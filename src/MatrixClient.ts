@@ -761,13 +761,15 @@ export class MatrixClient extends EventEmitter {
 
         if (!raw) return; // nothing to process
 
-        if (this.crypto) {
-            const inbox: IToDeviceMessage[] = [];
-            if (raw['to_device']?.['events']) {
-                inbox.push(...raw['to_device']['events']);
-                // TODO: Emit or do something with unknown messages?
-            }
+        const inbox: IToDeviceMessage[] = [];
+        if (raw['to_device']?.['events']) {
+            inbox.push(...raw['to_device']['events']);
+        }
+        for (const message of inbox) {
+            this.emit("to-device", message);
+        }
 
+        if (this.crypto) {
             let unusedFallbacks: OTKAlgorithm[] = [];
             if (raw['org.matrix.msc2732.device_unused_fallback_key_types']) {
                 unusedFallbacks = raw['org.matrix.msc2732.device_unused_fallback_key_types'];
@@ -1622,10 +1624,10 @@ export class MatrixClient extends EventEmitter {
         if (!mxcUrl.toLowerCase().startsWith("mxc://")) {
             throw Error("'mxcUrl' does not begin with mxc://");
         }
-        const urlParts = mxcUrl.substr("mxc://".length).split("/");
+        const urlParts = mxcUrl.substring("mxc://".length).split("/");
         const domain = encodeURIComponent(urlParts[0]);
         const mediaId = encodeURIComponent(urlParts[1].split("/")[0]);
-        const path = `/_matrix/media/v3/download/${domain}/${mediaId}`;
+        const path = `/_matrix/client/v1/media/download/${domain}/${mediaId}`;
         const res = await this.doRequest("GET", path, { allow_remote: allowRemote }, null, null, true, null, true);
         return {
             data: res.body,
